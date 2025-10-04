@@ -23,3 +23,11 @@ class Crater(BaseModel):
     crater_lon: float
     angle:float
     neo_id:int
+
+class ShowCrater(BaseModel):
+    name:str
+    crater_size:float
+    earthquake_mag:Optional[float]
+    tsunami_radius:Optional[float]
+    lat:float
+    lon:float

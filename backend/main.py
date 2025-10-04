@@ -122,3 +122,8 @@ async def create_crater(crater: Crater,db:Session=Depends(get_db)):
         "earthquake_mag": earthquake_mag,
         "tsunami_radius": tsunami_radius
     }
+
+@app.get('/craters',response_model=list[schemas.ShowCrater])
+def show_craters(db:Session=Depends(get_db)):
+    craters=db.query(model.Meteor).all()
+    return craters
