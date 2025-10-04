@@ -22,7 +22,7 @@ export default function AppSidebar() {
     }
 
     return (
-        <div className="h-screen"> {/* Make sure the parent has height */}
+        <div className="h-screen"> 
             <Sidebar className="flex flex-col h-full mt-0">
                 <SidebarHeader>
                     <SidebarMenu>
