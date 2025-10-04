@@ -19,7 +19,7 @@ class Show_Meteor(BaseModel):
         orm_mode = True
 
 class Crater(BaseModel):
-    id:int
     crater_lat: float
     crater_lon: float
     angle:float
+    neo_id:int

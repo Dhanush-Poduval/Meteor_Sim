@@ -1,109 +1,105 @@
-from fastapi import FastAPI,Depends,HTTPException,status
-from fastapi.params import Form
-from . import model , schemas
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from .databse import engine,get_db
-from typing import List
-import math
-import random
-app=FastAPI()
+from pydantic import BaseModel
+import math, random, httpx
 
+app = FastAPI()
 
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
+origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,      # Only these origins are allowed
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],        # Allow all HTTP methods
-    allow_headers=["*"],        # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+NASA_API_KEY = "cvOcjjV8goKHNGY0tKXYZIsamGlawfU0bAd7kjIO"
 
+class Crater(BaseModel):
+    crater_lat: float
+    crater_lon: float
+    angle: float
+    neo_id: str
 
-model.Base.metadata.create_all(bind=engine)
+def calc_crater(speed, radius, material="stony"):
+    density = {"iron": 7800, "stony": 3000, "stony iron": 4500}.get(material.lower(), 3000)
+    mass = (4/3) * math.pi * (radius**3) * density
+    a, b = 1.8, 0.28
+    speed_meters = speed * 1000
+    energy = 0.5 * mass * (speed_meters**2)
+    crater_diameter = a * (energy**b)
+    return crater_diameter, energy
 
-def calc_crater( speed , radius , type):
-    type=type.lower()
-    if type=='iron':
-        density=7800
-    elif type=='stony':
-        density=3000
-    elif type=='stony iron':
-        density=4500
-    else:
-        density=3000
-    mass=(4/3)*math.pi*(radius**3)*density
-    a=1.8
-    b=0.28
-    speed_meters=speed*1000
-    energy=0.5*mass*(speed_meters**2)
-    crater_diameter=a*(energy**b)
-    return crater_diameter
+def crater_impact(lat, lon, speed, angle):
+    speed_meters = speed * 1000
+    angle = math.radians(angle)
+    azimuth = math.radians(random.uniform(0, 360))
+    g, h = 9.81, 100_000
+    t_fall = math.sqrt((2*h)/g)
+    x_m = speed_meters * math.cos(angle) * t_fall
+    dx = x_m * math.cos(azimuth)
+    dy = x_m * math.sin(azimuth)
+    R = 6371_000
+    impact_lat = lat + math.degrees(dy / R)
+    impact_lon = lon + math.degrees(dx / (R * math.cos(math.radians(lat))))
+    return impact_lat, impact_lon
 
-def will_hit(speed , radius , angle):
-    if radius<1 and speed<12:
-        return "Burned up in atmosphere"
-    if angle<10:
-        return "Skipped"
+def is_water(lat, lon):
+    return lat < 0 or lon < 0
+
+def estimate_earthquake(energy):
+    return min(9.0, 5 + math.log10(energy)/3)
+
+def estimate_tsunami(energy):
+    return min(500, (energy / 1e15)**(1/3) * 10)
+
+@app.get("/neos")
+async def get_neos():
+    url = f"https://api.nasa.gov/neo/rest/v1/feed?api_key={NASA_API_KEY}"
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url)
+        data = res.json()
+    neos = []
+    for day in data["near_earth_objects"]:
+        for neo in data["near_earth_objects"][day]:
+            neos.append({
+                "id": neo["id"],
+                "name": neo["name"],
+                "speed": float(neo["close_approach_data"][0]["relative_velocity"]["kilometers_per_second"]),
+                "radius": float(neo["estimated_diameter"]["meters"]["estimated_diameter_max"] / 2),
+                "hazardous": neo["is_potentially_hazardous_asteroid"]
+            })
+    return neos
+
+@app.post("/crater")
+async def create_crater(crater: Crater):
+    url = f"https://api.nasa.gov/neo/rest/v1/neo/{crater.neo_id}?api_key={NASA_API_KEY}"
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url)
+        if res.status_code != 200:
+            raise HTTPException(status_code=404, detail="NEO not found")
+        neo = res.json()
+
+    speed = float(neo["close_approach_data"][0]["relative_velocity"]["kilometers_per_second"])
+    radius = float(neo["estimated_diameter"]["meters"]["estimated_diameter_max"] / 2)
+    material = "stony"
     
-    return "impact"
+    crater_size, energy = calc_crater(speed, radius, material)
+    impact_lat, impact_lon = crater_impact(crater.crater_lat, crater.crater_lon, speed, crater.angle)
+    
+    water_hit = is_water(impact_lat, impact_lon)
+    earthquake_mag = estimate_earthquake(energy) if not water_hit else 0
+    tsunami_radius = estimate_tsunami(energy) if water_hit else 0
 
-def crater_impact(lat,lon,speed,angle):
-    speed_meters=speed*1000
-    angle=math.radians(angle)
-    azimuth=math.radians(random.uniform(0,360))
-    g=9.81
-    h=100_000
-    t_fall=math.sqrt((2*h)/g)
-    x_m=speed_meters*math.cos(angle)*t_fall
-    dx=x_m*math.cos(azimuth)
-    dy=x_m*math.sin(azimuth)
-    R=6371_000
-    impact_lat=lat+math.degrees(dy/R)
-    impact_lon=lon+math.degrees(dx/(R*math.cos(math.radians(lat))))
-    return impact_lat,impact_lon
-
-@app.post('/meteor')
-def meteor(schemas:schemas.Add_Meteor,db:Session=Depends(get_db)):
-    meteor=model.Meteor(name=schemas.name,speed=schemas.speed,radius=schemas.radius,material=schemas.material)
-    db.add(meteor)
-    db.commit()
-    db.refresh(meteor)
-    return{
-        'name':schemas.name,
-        'speed':schemas.speed,
-        'radius':schemas.radius,
-        'type':schemas.material
+    return {
+        "name": neo["name"],
+        "speed": speed,
+        "radius": radius,
+        "crater_size": crater_size,
+        "impact_lat": impact_lat,
+        "impact_lon": impact_lon,
+        "impact_type": "water" if water_hit else "land",
+        "earthquake_mag": earthquake_mag,
+        "tsunami_radius": tsunami_radius
     }
-
-@app.get('/meteors',response_model=List[schemas.Show_Meteor])
-def show_meteor(db:Session=Depends(get_db)):
-    meteor=db.query(model.Meteor).all()
-    if not meteor:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="No meteors found")
-    return meteor
-
-@app.post('/crater')
-def create_crater(crater:schemas.Crater, db:Session=Depends(get_db),):
-    meteor=db.query(model.Meteor).filter(model.Meteor.id==crater.id).first()
-    if not meteor:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Meteor not found")
-    outcome=will_hit(meteor.speed,meteor.radius,crater.angle)
-    if outcome=="burned":
-        return {"message":"Meteor burned up in atmosphere"}
-    if outcome=="Skipped":
-        return {"message":"Meteor skipped off atmosphere"}
-    
-    new_crater=calc_crater(meteor.speed,meteor.radius,meteor.material)
-    lat,lon=crater_impact(crater.crater_lat , crater.crater_lon,meteor.speed,crater.angle)
-    return{
-        'crater_size':new_crater,
-        'crater_lat':lat,
-        'crater_lon':lon
-    }
-    
