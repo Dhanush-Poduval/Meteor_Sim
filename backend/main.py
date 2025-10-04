@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from .databse import engine,get_db
 from typing import List
 import math
+import random
 app=FastAPI()
 
 model.Base.metadata.create_all(bind=engine)
@@ -28,7 +29,7 @@ def calc_crater( speed , radius , type):
 def crater_impact(lat,lon,speed,angle):
     speed_meters=speed*1000
     angle=math.radians(angle)
-    azimuth=math.radians(azimuth)
+    azimuth=math.radians(random.uniform(0,360))
     g=9.81
     h=100_000
     t_fall=math.sqrt((2*h)/g)
