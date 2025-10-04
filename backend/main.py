@@ -26,6 +26,14 @@ def calc_crater( speed , radius , type):
     crater_diameter=a*(energy**b)
     return crater_diameter
 
+def will_hit(speed , radius , angle):
+    if radius<1 and speed<12:
+        return "Burned up in atmosphere"
+    if angle<10:
+        return "Skipped"
+    
+    return "impact"
+
 def crater_impact(lat,lon,speed,angle):
     speed_meters=speed*1000
     angle=math.radians(angle)
@@ -66,6 +74,12 @@ def create_crater(crater:schemas.Crater, db:Session=Depends(get_db),):
     meteor=db.query(model.Meteor).filter(model.Meteor.id==crater.id).first()
     if not meteor:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Meteor not found")
+    outcome=will_hit(meteor.speed,meteor.radius,crater.angle)
+    if outcome=="burned":
+        return {"message":"Meteor burned up in atmosphere"}
+    if outcome=="Skipped":
+        return {"message":"Meteor skipped off atmosphere"}
+    
     new_crater=calc_crater(meteor.speed,meteor.radius,meteor.material)
     lat,lon=crater_impact(crater.crater_lat , crater.crater_lon,meteor.speed,crater.angle)
     return{
