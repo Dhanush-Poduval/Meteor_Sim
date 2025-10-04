@@ -14,12 +14,13 @@ def calc_crater( speed , radius , type):
         density=7800
     elif type=='Stony':
         density=3000
-    elif type=='stony-iron':
+    elif type=='Stony Iron':
         density=4500
     mass=(4/3)*math.pi*(radius**3)*density
     a=1.8
     b=0.28
-    energy=0.5*mass*(speed**2)
+    speed_meters=speed*1000
+    energy=0.5*mass*(speed_meters**2)
     crater_diameter=a*(energy**b)
     return crater_diameter
 
