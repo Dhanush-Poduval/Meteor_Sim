@@ -127,3 +127,22 @@ async def create_crater(crater: Crater,db:Session=Depends(get_db)):
 def show_craters(db:Session=Depends(get_db)):
     craters=db.query(model.Meteor).all()
     return craters
+
+@app.get('/meteor/{id}')
+async def specific_meteor(id:str):
+    url = f"https://api.nasa.gov/neo/rest/v1/feed?api_key={NASA_API_KEY}"
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url)
+        data = res.json()
+    neos = []
+    for day in data["near_earth_objects"]:
+        for neo in data["near_earth_objects"][day]:
+            if neo["id"]==id:
+                return{
+                    "id": neo["id"],
+                    "name": neo["name"],
+                    "speed": float(neo["close_approach_data"][0]["relative_velocity"]["kilometers_per_second"]),
+                    "radius": float(neo["estimated_diameter"]["meters"]["estimated_diameter_max"] / 2),
+                    "hazardous": neo["is_potentially_hazardous_asteroid"]
+                }
+   
