@@ -1,9 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from . import model,schemas
+from .databse import get_db ,engine
 import math, random, httpx
 
 app = FastAPI()
+
+model.Base.metadata.create_all(bind=engine)
 
 origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 app.add_middleware(
@@ -49,7 +54,7 @@ def is_water(lat, lon):
     return lat < 0 or lon < 0
 
 def estimate_earthquake(energy):
-    return min(9.0, 5 + math.log10(energy)/3)
+    return  2/3 * math.log10(energy) - 3.2 
 
 def estimate_tsunami(energy):
     return min(500, (energy / 1e15)**(1/3) * 10)
@@ -73,7 +78,7 @@ async def get_neos():
     return neos
 
 @app.post("/crater")
-async def create_crater(crater: Crater):
+async def create_crater(crater: Crater,db:Session=Depends(get_db)):
     url = f"https://api.nasa.gov/neo/rest/v1/neo/{crater.neo_id}?api_key={NASA_API_KEY}"
     async with httpx.AsyncClient() as client:
         res = await client.get(url)
@@ -92,6 +97,20 @@ async def create_crater(crater: Crater):
     earthquake_mag = estimate_earthquake(energy) if not water_hit else 0
     tsunami_radius = estimate_tsunami(energy) if water_hit else 0
 
+    craters=model.Meteor(
+        neo_id=crater.neo_id,
+        name=neo["name"],
+        speed=speed,
+        radius=radius,
+        crater_size=crater_size,
+        lat=impact_lat,
+        lon=impact_lon,
+        impact="water" if water_hit else "land",
+        earthquake_mag=earthquake_mag,
+        tsunami_radius=tsunami_radius)
+    db.add(craters)
+    db.commit()
+    db.refresh(craters)
     return {
         "name": neo["name"],
         "speed": speed,

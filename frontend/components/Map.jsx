@@ -1,39 +1,57 @@
 'use client';
 
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from 'react-leaflet';
-import {Icon }from 'leaflet';
+import { Icon } from 'leaflet';
+import React, { useEffect, useState } from 'react';
+import "leaflet/dist/leaflet.css";
 
-import React from 'react';
-import "leaflet/dist/leaflet.css"
+export default function MeteorMap() {
+  const [meteors, setMeteors] = useState([]);
 
+  const customIcon = new Icon({
+    iconUrl: "map-pin (1).png",
+    iconSize: [38, 38]
+  });
 
+  useEffect(() => {
+    async function fetchMeteors() {
+      try {
+        const meteorsRes = await fetch('http://127.0.0.1:8000/meteors');
+        const meteorsData = await meteorsRes.json();
+        const craterPromises = meteorsData.map(async (m) => {
+          console.log(m.id)
+          const craterRes = await fetch('http://127.0.0.1:8000/crater', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: m.id,
+              crater_lat: 23.5, 
+              crater_lon: 80,   
+              angle: 45
+            })
+          });
+          const craterData = await craterRes.json();
 
-export default function DummyMeteorMap() {
-    //dummy
-  const meteors = [
-    {
-      name: 'Impactor-2025',
-      speed: 15, 
-      material: 'Iron',
-      crater_size: 500, 
-      entry: { lat: 23.5, lon: 80 },
-      impact: { lat: 23.55, lon: 80.03 },
-      outcome: 'Impact'
-    },
-    {
-      name: 'StonyRock',
-      speed: 8,
-      material: 'Stony',
-      crater_size: 0,
-      entry: { lat: 22.5, lon: 81 },
-      impact: { lat: 22.52, lon: 81.01 },
-      outcome: 'Burned up'
+          return {
+            name: m.name,
+            speed: m.speed,
+            material: m.material,
+            crater_size: craterData.crater_size || 0,
+            entry: { lat: 23.5, lon: 80 },    
+            impact: { lat: craterData.crater_lat || 23.5, lon: craterData.crater_lon || 80 },
+            outcome: craterData.message || 'Impact'
+          };
+        });
+
+        const results = await Promise.all(craterPromises);
+        setMeteors(results);
+      } catch (err) {
+        console.error(err);
+      }
     }
-  ];
-   const customIcon=new Icon({
-        iconUrl:"map-pin (1).png",
-        iconSize:[38,38] 
-    })
+
+    fetchMeteors();
+  }, []);
 
   return (
     <MapContainer center={[23.5, 80]} zoom={13} style={{ height: "100%", width: "100%" }}>
@@ -62,7 +80,7 @@ export default function DummyMeteorMap() {
               />
               <Polyline
                 positions={[[m.entry.lat, m.entry.lon], [m.impact.lat, m.impact.lon]]}
-                color="yellow"
+                color="blue"
               />
             </>
           )}
