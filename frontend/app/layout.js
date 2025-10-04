@@ -3,6 +3,8 @@ import "./globals.css";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import Sidebar from "@/components/Sidebar";
 import AppSidebar from "@/components/Sidebar";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import Navbar from "@/components/Navbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,15 +23,29 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider>
-          <AppSidebar />
-           {children}
+        <ThemeProvider attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange>
+          <SidebarProvider>
+            <AppSidebar />
+            <div className="w-full">
+              <Navbar />
+              <div className="px-4 mt-10">
+                {children}
+              </div>
+            </div>
+            
+            
 
-        </SidebarProvider>
+          </SidebarProvider>
+
+        </ThemeProvider>
+       
         
       </body>
     </html>

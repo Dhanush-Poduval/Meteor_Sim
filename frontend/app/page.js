@@ -10,7 +10,7 @@ const Map = dynamic(() => import("../components/Map"), {
 export default function Page() {
   return (
     
-    <div className="h-screen w-screen">
+    <div className="">
       Test-1
     </div>
   );

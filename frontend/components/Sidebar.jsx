@@ -27,7 +27,7 @@ export default function AppSidebar() {
                 <SidebarHeader>
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <h2 className="text-2xl font-bold mb-4">NEO's present currently</h2>
+                            <h2 className="text-2xl font-bold mb-1 text-center">NEOs</h2>
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarHeader>
