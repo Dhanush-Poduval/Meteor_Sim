@@ -10,13 +10,20 @@ import random
 app=FastAPI()
 
 
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  
+    allow_origins=origins,      # Only these origins are allowed
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],        # Allow all HTTP methods
+    allow_headers=["*"],        # Allow all headers
 )
+
+
 
 model.Base.metadata.create_all(bind=engine)
 
@@ -28,6 +35,8 @@ def calc_crater( speed , radius , type):
         density=3000
     elif type=='stony iron':
         density=4500
+    else:
+        density=3000
     mass=(4/3)*math.pi*(radius**3)*density
     a=1.8
     b=0.28

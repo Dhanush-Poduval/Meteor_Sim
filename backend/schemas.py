@@ -8,6 +8,7 @@ class Add_Meteor(BaseModel):
     radius: float
     material:str
 class Show_Meteor(BaseModel):
+    id:int
     name: str
     speed: float
     radius: float
