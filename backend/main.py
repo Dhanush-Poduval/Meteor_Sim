@@ -10,11 +10,12 @@ app=FastAPI()
 model.Base.metadata.create_all(bind=engine)
 
 def calc_crater( speed , radius , type):
+    type=type.lower()
     if type=='iron':
         density=7800
-    elif type=='Stony':
+    elif type=='stony':
         density=3000
-    elif type=='Stony Iron':
+    elif type=='stony iron':
         density=4500
     mass=(4/3)*math.pi*(radius**3)*density
     a=1.8
@@ -27,18 +28,16 @@ def calc_crater( speed , radius , type):
 def crater_impact(lat,lon,speed,angle):
     speed_meters=speed*1000
     angle=math.radians(angle)
+    azimuth=math.radians(azimuth)
     g=9.81
     h=100_000
     t_fall=math.sqrt((2*h)/g)
     x_m=speed_meters*math.cos(angle)*t_fall
-
-    lat_rad=math.radians(lat)
-    lon_rad=math.radians(lon)
+    dx=x_m*math.cos(azimuth)
+    dy=x_m*math.sin(azimuth)
     R=6371_000
-    dlat=0
-    dlon=x_m/(R*math.cos(lat_rad))
-    impact_lat=lat+math.degrees(dlat)
-    impact_lon=lon+math.degrees(dlon)
+    impact_lat=lat+math.degrees(dy/R)
+    impact_lon=lon+math.degrees(dx/(R*math.cos(math.radians(lat))))
     return impact_lat,impact_lon
 
 @app.post('/meteor')
@@ -64,6 +63,8 @@ def show_meteor(db:Session=Depends(get_db)):
 @app.post('/crater')
 def create_crater(crater:schemas.Crater, db:Session=Depends(get_db),):
     meteor=db.query(model.Meteor).filter(model.Meteor.id==crater.id).first()
+    if not meteor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Meteor not found")
     new_crater=calc_crater(meteor.speed,meteor.radius,meteor.material)
     lat,lon=crater_impact(crater.crater_lat , crater.crater_lon,meteor.speed,crater.angle)
     return{
