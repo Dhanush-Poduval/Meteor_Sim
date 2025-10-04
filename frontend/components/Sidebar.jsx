@@ -3,10 +3,11 @@ import React, { useEffect, useState } from 'react'
 import { SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarSeparator, Sidebar } from './ui/sidebar'
 import { Telescope } from 'lucide-react'
 import { ScrollArea } from './ui/scroll-area'
+import { useRouter } from 'next/navigation'
 
 export default function AppSidebar() {
     const [meteors, setMeteors] = useState([])
-
+    const router=useRouter()
     useEffect(() => {
         getChats()
     }, [])
@@ -37,7 +38,7 @@ export default function AppSidebar() {
                         <SidebarMenu>
                             {meteors.map((meteor) => (
                                 <SidebarMenuItem key={meteor.id}>
-                                    <div className="flex items-center gap-2 p-2 rounded cursor-pointer">
+                                    <div className="flex items-center gap-2 p-2 rounded cursor-pointer" onClick={()=>router.push(`/neo/meteor/${meteor.id}`)}>
                                         <Telescope size={16} />
                                         <span>{meteor.name}</span>
                                     </div>
