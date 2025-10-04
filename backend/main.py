@@ -24,6 +24,23 @@ def calc_crater( speed , radius , type):
     crater_diameter=a*(energy**b)
     return crater_diameter
 
+def crater_impact(lat,lon,speed,angle):
+    speed_meters=speed*1000
+    angle=math.radians(angle)
+    g=9.81
+    h=100_000
+    t_fall=math.sqrt((2*h)/g)
+    x_m=speed_meters*math.cos(angle)*t_fall
+
+    lat_rad=math.radians(lat)
+    lon_rad=math.radians(lon)
+    R=6371_000
+    dlat=0
+    dlon=x_m/(R*math.cos(lat_rad))
+    impact_lat=lat+math.degrees(dlat)
+    impact_lon=lon+math.degrees(dlon)
+    return impact_lat,impact_lon
+
 @app.post('/meteor')
 def meteor(schemas:schemas.Add_Meteor,db:Session=Depends(get_db)):
     meteor=model.Meteor(name=schemas.name,speed=schemas.speed,radius=schemas.radius,material=schemas.material)
@@ -45,10 +62,13 @@ def show_meteor(db:Session=Depends(get_db)):
     return meteor
 
 @app.post('/crater')
-def create_crater(id=int , db:Session=Depends(get_db)):
-    meteor=db.query(model.Meteor).filter(model.Meteor.id==id).first()
-    crater=calc_crater(meteor.speed,meteor.radius,meteor.material)
+def create_crater(crater:schemas.Crater, db:Session=Depends(get_db),):
+    meteor=db.query(model.Meteor).filter(model.Meteor.id==crater.id).first()
+    new_crater=calc_crater(meteor.speed,meteor.radius,meteor.material)
+    lat,lon=crater_impact(crater.crater_lat , crater.crater_lon,meteor.speed,crater.angle)
     return{
-        'crater_size':crater
+        'crater_size':new_crater,
+        'crater_lat':lat,
+        'crater_lon':lon
     }
     
