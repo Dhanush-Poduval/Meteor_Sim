@@ -1,12 +1,22 @@
 from fastapi import FastAPI,Depends,HTTPException,status
 from fastapi.params import Form
 from . import model , schemas
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .databse import engine,get_db
 from typing import List
 import math
 import random
 app=FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 model.Base.metadata.create_all(bind=engine)
 
