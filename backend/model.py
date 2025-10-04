@@ -8,5 +8,5 @@ class Meteor(Base):
     id=Column(Integer, primary_key=True, index=True)
     name=Column(String, index=True)
     speed=Column(Float)
-    mass=Column(Float)
-    radius=Column(Float)  
+    radius=Column(Float) 
+    material=Column(String)

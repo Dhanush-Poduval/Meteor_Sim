@@ -5,13 +5,14 @@ class Add_Meteor(BaseModel):
    
     name: str
     speed: float
-    mass: float
     radius: float
+    material:str
 class Show_Meteor(BaseModel):
     name: str
     speed: float
-    mass: float
     radius: float
+    material:str
+    
 
     class Config:
         orm_mode = True
