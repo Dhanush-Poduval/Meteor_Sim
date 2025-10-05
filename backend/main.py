@@ -50,8 +50,23 @@ def crater_impact(lat, lon, speed, angle):
     impact_lon = lon + math.degrees(dx / (R * math.cos(math.radians(lat))))
     return impact_lat, impact_lon
 
-def is_water(lat, lon):
-    return lat < 0 or lon < 0
+import httpx
+
+async def is_water(lat, lon):
+    try:
+        url = f"https://api.open-meteo.com/v1/elevation?latitude={lat}&longitude={lon}"
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url)
+            data = res.json()
+        elevation = data.get("elevation", [None])[0]
+        return elevation is not None and elevation <= 0
+    except:
+        return False
+
+
+
+
+
 
 def estimate_earthquake(energy):
     return  2/3 * math.log10(energy) - 3.2 
@@ -93,7 +108,7 @@ async def create_crater(crater: Crater,db:Session=Depends(get_db)):
     crater_size, energy = calc_crater(speed, radius, material)
     impact_lat, impact_lon = crater_impact(crater.crater_lat, crater.crater_lon, speed, crater.angle)
     
-    water_hit = is_water(impact_lat, impact_lon)
+    water_hit = await is_water(impact_lat, impact_lon)
     earthquake_mag = estimate_earthquake(energy) if not water_hit else 0
     tsunami_radius = estimate_tsunami(energy) if water_hit else 0
 
@@ -127,6 +142,7 @@ async def create_crater(crater: Crater,db:Session=Depends(get_db)):
 def show_craters(db:Session=Depends(get_db)):
     craters=db.query(model.Meteor).all()
     return craters
+
 
 @app.get('/meteor/{id}')
 async def specific_meteor(id:str):

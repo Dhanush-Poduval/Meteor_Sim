@@ -6,7 +6,7 @@ class Meteor(Base):
     __tablename__="craters"
 
     id=Column(Integer, primary_key=True, index=True)
-    neo_id=Column(String, unique=True, index=True)
+    neo_id=Column(String, index=True)
     name=Column(String, index=True)
     speed=Column(Float)
     radius=Column(Float) 

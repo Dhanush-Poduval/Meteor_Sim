@@ -31,3 +31,6 @@ class ShowCrater(BaseModel):
     tsunami_radius:Optional[float]
     lat:float
     lon:float
+    impact:str
+    class Config:
+        orm_mode = True
