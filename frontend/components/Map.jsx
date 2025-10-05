@@ -27,11 +27,10 @@ export default function MeteorMap() {
     fetchCraters();
   }, []);
 
-  // Determine color for crater based on impact type and effects
   const getCraterColor = (crater) => {
-    if (crater.impact_type === 'water' && crater.tsunami_radius > 0) return 'blue';
-    if (crater.impact_type === 'land' && crater.earthquake_mag > 6) return 'red';
-    return crater.impact_type === 'land' ? 'orange' : 'lightblue';
+    if (crater.impact === 'water' && crater.tsunami_radius > 0) return 'blue';
+    if (crater.impact === 'land' && crater.earthquake_mag > 6) return 'red';
+    return crater.impact === 'land' ? 'orange' : 'lightblue';
   };
 
   return (
@@ -43,20 +42,18 @@ export default function MeteorMap() {
 
       {craters.map((crater, idx) => (
         <React.Fragment key={idx}>
-          {/* Entry marker */}
           <Marker position={[crater.lat, crater.lon]} icon={customIcon}>
             <Popup>
               <strong>{crater.name}</strong><br />
-              Speed: {crater.speed} km/s<br />
-              Radius: {crater.radius} m<br />
-              Impact Type: {crater.impact_type}<br />
+             
+             
+             
               Crater Size: {Math.round(crater.crater_size)} m<br />
               Earthquake: {crater.earthquake_mag.toFixed(2)}<br />
               Tsunami Radius: {Math.round(crater.tsunami_radius)} km
             </Popup>
           </Marker>
 
-          {/* Crater / impact circle */}
           <Circle
             center={[crater.lat, crater.lon]}
             radius={crater.crater_size}
@@ -66,13 +63,11 @@ export default function MeteorMap() {
               fillOpacity: 0.5
             }}
           />
-
-          {/* Entry → impact line */}
           {crater.impact_type && (
             <Polyline
               positions={[
                 [crater.lat, crater.lon],
-                [crater.lat, crater.lon] // For now same as impact, can adjust if you store entry separately
+                [crater.lat, crater.lon] 
               ]}
               color={crater.impact_type === 'water' ? 'blue' : 'red'}
             />
