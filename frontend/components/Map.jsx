@@ -6,83 +6,76 @@ import React, { useEffect, useState } from 'react';
 import "leaflet/dist/leaflet.css";
 
 export default function MeteorMap() {
-  const [meteors, setMeteors] = useState([]);
+  const [craters, setCraters] = useState([]);
 
   const customIcon = new Icon({
-    iconUrl: "map-pin (1).png",
+    iconUrl: "/map-pin (1).png",
     iconSize: [38, 38]
   });
 
   useEffect(() => {
-    async function fetchMeteors() {
+    async function fetchCraters() {
       try {
-        const meteorsRes = await fetch('http://127.0.0.1:8000/meteors');
-        const meteorsData = await meteorsRes.json();
-        const craterPromises = meteorsData.map(async (m) => {
-          console.log(m.id)
-          const craterRes = await fetch('http://127.0.0.1:8000/crater', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: m.id,
-              crater_lat: 23.5, 
-              crater_lon: 80,   
-              angle: 45
-            })
-          });
-          const craterData = await craterRes.json();
-
-          return {
-            name: m.name,
-            speed: m.speed,
-            material: m.material,
-            crater_size: craterData.crater_size || 0,
-            entry: { lat: 23.5, lon: 80 },    
-            impact: { lat: craterData.crater_lat || 23.5, lon: craterData.crater_lon || 80 },
-            outcome: craterData.message || 'Impact'
-          };
-        });
-
-        const results = await Promise.all(craterPromises);
-        setMeteors(results);
+        const res = await fetch('http://127.0.0.1:8000/craters');
+        const data = await res.json();
+        setCraters(data);
       } catch (err) {
         console.error(err);
       }
     }
 
-    fetchMeteors();
+    fetchCraters();
   }, []);
 
+  // Determine color for crater based on impact type and effects
+  const getCraterColor = (crater) => {
+    if (crater.impact_type === 'water' && crater.tsunami_radius > 0) return 'blue';
+    if (crater.impact_type === 'land' && crater.earthquake_mag > 6) return 'red';
+    return crater.impact_type === 'land' ? 'orange' : 'lightblue';
+  };
+
   return (
-    <MapContainer center={[23.5, 80]} zoom={13} style={{ height: "100%", width: "100%" }}>
+    <MapContainer center={[20, 80]} zoom={3} style={{ height: "100vh", width: "100%" }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution=''
+        attribution=""
       />
 
-      {meteors.map((m, idx) => (
+      {craters.map((crater, idx) => (
         <React.Fragment key={idx}>
-          <Marker position={[m.entry.lat, m.entry.lon]} icon={customIcon}>
+          {/* Entry marker */}
+          <Marker position={[crater.lat, crater.lon]} icon={customIcon}>
             <Popup>
-              <strong>{m.name}</strong><br />
-              Speed: {m.speed} km/s<br />
-              Material: {m.material}<br />
-              Outcome: {m.outcome}
+              <strong>{crater.name}</strong><br />
+              Speed: {crater.speed} km/s<br />
+              Radius: {crater.radius} m<br />
+              Impact Type: {crater.impact_type}<br />
+              Crater Size: {Math.round(crater.crater_size)} m<br />
+              Earthquake: {crater.earthquake_mag.toFixed(2)}<br />
+              Tsunami Radius: {Math.round(crater.tsunami_radius)} km
             </Popup>
           </Marker>
 
-          {m.outcome === 'Impact' && (
-            <>
-              <Circle
-                center={[m.impact.lat, m.impact.lon]}
-                radius={m.crater_size}
-                pathOptions={{ color: 'red', fillColor: 'red', fillOpacity: 0.5 }}
-              />
-              <Polyline
-                positions={[[m.entry.lat, m.entry.lon], [m.impact.lat, m.impact.lon]]}
-                color="blue"
-              />
-            </>
+          {/* Crater / impact circle */}
+          <Circle
+            center={[crater.lat, crater.lon]}
+            radius={crater.crater_size}
+            pathOptions={{
+              color: getCraterColor(crater),
+              fillColor: getCraterColor(crater),
+              fillOpacity: 0.5
+            }}
+          />
+
+          {/* Entry → impact line */}
+          {crater.impact_type && (
+            <Polyline
+              positions={[
+                [crater.lat, crater.lon],
+                [crater.lat, crater.lon] // For now same as impact, can adjust if you store entry separately
+              ]}
+              color={crater.impact_type === 'water' ? 'blue' : 'red'}
+            />
           )}
         </React.Fragment>
       ))}

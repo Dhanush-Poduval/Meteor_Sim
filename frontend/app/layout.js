@@ -35,7 +35,7 @@ export default function RootLayout({ children }) {
             <AppSidebar />
             <div className="w-full">
               <Navbar />
-              <div className="px-4 mt-10">
+              <div className="px-4 mt-5">
                 {children}
               </div>
             </div>

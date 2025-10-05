@@ -1,4 +1,4 @@
-// app/page.jsx
+
 'use client'
 
 import dynamic from "next/dynamic";
@@ -10,8 +10,8 @@ const Map = dynamic(() => import("../components/Map"), {
 export default function Page() {
   return (
     
-    <div className="">
-      Test-1
+    <div className="h-screen w-screen">
+      <Map />
     </div>
   );
 }
